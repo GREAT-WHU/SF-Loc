@@ -7,6 +7,7 @@
 <img alt="" src="./assets/abstract.svg" width='500px' />
 </div>
 
+[[Paper](https://arxiv.org/abs/2412.01500)]
 
 ## What is this? 
 
