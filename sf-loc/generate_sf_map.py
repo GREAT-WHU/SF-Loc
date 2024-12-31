@@ -94,6 +94,7 @@ if __name__ == '__main__':
 
     all_map_data['descriptor'] = np.concatenate(all_map_data['descriptor'])
     all_map_data['poses'] = np.concatenate(all_map_data['poses'])
+    all_map_data['xyz_ref'] = dump_data['xyz_ref']
     pickle.dump(all_map_data,open(args.map_file,'wb'))
 
     
