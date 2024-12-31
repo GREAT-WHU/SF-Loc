@@ -63,9 +63,9 @@ We use the weights of [DROID-SLAM](https://github.com/princeton-vl/DROID-SLAM?ta
 
 In the mapping phase, multi-sensor data are used for dense bundle adjustment (DBA) to recover image depths and poses. Based on the global optimization results, the lightweight structure frame map is generated. 
 
-1.1 Download the [WHU1023](https://whueducn-my.sharepoint.com/:u:/g/personal/2015301610143_whu_edu_cn/EQX_UOB79AhHlsSI7hb2Jd4B69qd367NCMHOAcFZi7N5Mg?e=gi9NP1) data.
+1.1 Download the [WHU1023](https://whueducn-my.sharepoint.com/:u:/g/personal/2015301610143_whu_edu_cn/EQX_UOB79AhHlsSI7hb2Jd4B69qd367NCMHOAcFZi7N5Mg?e=gi9NP1) data sequence.
 
-1.2  Specify the data path in [launch_dba.py](launch_dba.py), then run the following command 
+1.2  Specify the data paths in [launch_dba.py](launch_dba.py), then run the following command 
 ```Bash
 python launch_dba.py  # This would trigger demo_vio_WHU1023.py automatically.
 ```
@@ -73,7 +73,7 @@ This will launch a task for online multi-sensor DBA. Generally, **1x** real-time
 
 * **poses_realtime.txt** &emsp; IMU poses (both in world frame and ECEF frame) estimated by online multi-sensor DBA.
 * **graph.pkl** &emsp; Serialized GTSAM factors that store the multi-sensor DBA information.
-* **depth_video.pkl** &emsp; Dense depths estimated by online multi-sensor DBA.
+* **depth_video.pkl** &emsp; Dense depths estimated by DBA.
 
 1.3 
 Run the following command for global factor optimization (post-processing). This wouldn't cost a long time.
