@@ -13,7 +13,7 @@
 
 **SF-Loc** is vision-centered mapping and localization system, based on the map representation of visual structure frames. We use **multi-sensor dense bundle adjustment (MS-DBA)** to generate the visual structure frames and sparsify them through co-visibility checking, leading to lightweight map storage. On this basis, multi-frame information is utilized to achieve high-recall, accurate user-side **map-based localization**.
 
-
+**An important typo**: In the current version of the manuscript, there is a description ``to verify the effectiveness of the proposed SSS metric, we also implement a naive multi-frame VPR model by clustering the top-K candidates of multiple queries''. Here, "top-K" should be "top-10". Sorry for the typo.
 
 ## Update log
 - [x] Mapping Pipeline (deadline: 2024/12)
