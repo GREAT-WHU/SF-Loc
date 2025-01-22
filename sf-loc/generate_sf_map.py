@@ -28,9 +28,7 @@ if __name__ == '__main__':
     parser.add_argument("--method", type=str, help="",default='eigenplaces')
     parser.add_argument("--backbone", type=str, help="",default='ResNet50')
     parser.add_argument("--descriptors_dimension", type=str, help="",default=512)
-    parser.add_argument("--image_size", type=int, default=[384,512], nargs="+",
-                        help="Resizing shape for images (HxW). If a single int is passed, set the"
-                        "smallest edge of all images to this value, while keeping aspect ratio")
+    parser.add_argument("--image_size", type=int, default=[448,448], nargs="+")
     args = parser.parse_args()
 
     device = 'cuda'
@@ -42,12 +40,9 @@ if __name__ == '__main__':
 
     calib = np.loadtxt(args.calib, delimiter=" ")
     fx, fy, cx, cy = calib[:4]
-    h0, w0 = (384, 512)
-    h1 = int(h0 * np.sqrt((384 * 512) / (h0 * w0)))
-    w1 = int(w0 * np.sqrt((384 * 512) / (h0 * w0)))
     image_data = dataset_utils.ImageDataset(args.imagedir,
                                             args.imagestamp,
-                                            calib[:4],calib[4:8],None,[w1,h1])
+                                            calib[:4],calib[4:8],None)
     dump_data= pickle.load(open(args.depth_video,'rb'))
     disps = np.array(list(dump_data['disps'].values()))
 
