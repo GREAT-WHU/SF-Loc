@@ -43,15 +43,6 @@ ti0i0g = np.matrix([[ 0],
                     [-0.465],
                     [0.359]])
 
-ti1i0i1=np.matmul(Ri0i1.T,ti0i0i1)
-Ti0i1 = np.eye(4,4)
-Ti0i1[0:3,3] = ti0i0i1.reshape(3)
-print('Tic[1]:\n\
-%.8f,%.8f,%.8f,%.8f,\n\
-%.8f,%.8f,%.8f,%.8f,\n\
-%.8f,%.8f,%.8f,%.8f,\n\
-%.8f,%.8f,%.8f,%.8f,' % tuple(Ti0i1.reshape(-1)))
-quit()
 last_dd=[]
 
 all_data ={}

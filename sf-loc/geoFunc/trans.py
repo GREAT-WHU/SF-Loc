@@ -1,6 +1,8 @@
 import math
+from math import atan2, sin, cos
 from . import const_value
 import numpy as np
+from scipy.spatial.transform import Rotation
 
 def cart2geod(Xinput):
     X=Xinput[0]
@@ -163,6 +165,24 @@ def att2m(att):
             [-cp*sr, sp, cp*cr]])
     return R
 
+def att2m_4x4(att):
+    sp = math.sin(att[0])
+    cp=math.cos(att[0])
+    sr = math.sin(att[1])
+    cr =math.cos(att[1])
+    sy=math.sin(att[2])
+    cy= math.cos(att[2])
+    R=np.array([[cy*cr - sy*sp*sr, -sy*cp, cy*sr + sy*sp*cr,0],\
+        [sy*cr + cy*sp*sr, cy*cp, sy*sr - cy*sp*cr,0],\
+            [-cp*sr, sp, cp*cr,0],
+            [0,0,0,1]])
+    return R
+
+def dxyz2m_4x4(dxyz):
+    TTT = np.eye(4,4)
+    TTT[0:3,3] = np.array(dxyz)
+    return TTT
+
 def q2att(qnb):
     q0 = qnb[0]
     q1 = qnb[1]
@@ -209,5 +229,37 @@ def alignRt(xyz0,xyz1):
     R= np.matmul(U,VT)
     t=p1-np.matmul(R,p2)
     return R,t
+
+def R2ypr(R):
+    n = R[0]
+    o = R[1]
+    a = R[2]
+
+    y = atan2(n[1], n[0])
+    p = atan2(-n[2], n[0] * cos(y) + n[1] * sin(y))
+    r = atan2(a[0] * sin(y) - a[1] * cos(y), -o[0] * sin(y) + o[1] * cos(y))
+    return np.array([y,p,r])
+
+def ypr2R(ypr):
+    y = ypr[0]
+    p = ypr[1]
+    r = ypr[2]
+
+    Rz = np.array([[cos(y),-sin(y),0],[sin(y),cos(y),0],[0,0,1]])
+    Ry = np.array([[cos(p),0,sin(p)],[0,1,0],[-sin(p),0,cos(p)]])
+    Rx = np.array([[1,0,0],[0,cos(r),-sin(r)],[0,sin(r),cos(r)]])
+        
+    return np.matmul(np.matmul(Rz,Ry),Rx)
+
+def FromTwoVectors(a,b):
+    v0 = a/np.linalg.norm(a)
+    v1 = b/np.linalg.norm(b)
+    c = np.dot(v1,v0)
+    axis = np.cross(v0,v1)
+    s = math.sqrt((1+c)*2)
+    invs = 1/s
+    vec = axis*invs
+    w = s* 0.5
+    return Rotation.from_quat(np.array([vec[0],vec[1],vec[2],w])).as_matrix()
 
 

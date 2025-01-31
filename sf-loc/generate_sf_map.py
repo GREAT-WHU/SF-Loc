@@ -28,14 +28,16 @@ if __name__ == '__main__':
     parser.add_argument("--method", type=str, help="",default='eigenplaces')
     parser.add_argument("--backbone", type=str, help="",default='ResNet50')
     parser.add_argument("--descriptors_dimension", type=str, help="",default=512)
-    parser.add_argument("--image_size", type=int, default=[448,448], nargs="+")
+    parser.add_argument("--image_size", type=int, default=[384,384], nargs="+")
     args = parser.parse_args()
 
     device = 'cuda'
     map_indices_time = pickle.load(open(args.map_indices,'rb'))
     
     all_map_data = {'descriptor':[],'image':[],'disps':[],\
-                    'poses':[],'xyz_ref':[],'tstamps':[]}
+                    'poses':[],'xyz_ref':[],'tstamps':[],\
+                        'vpr_model':{'method':args.method,'backbone':args.backbone,
+                                     'descriptors_dimension':args.descriptors_dimension,'image_size':args.image_size}}
     poses_post = np.loadtxt(args.poses_post)
 
     calib = np.loadtxt(args.calib, delimiter=" ")
@@ -88,8 +90,10 @@ if __name__ == '__main__':
             all_map_data['descriptor'].append(descriptors.cpu().numpy())
 
     all_map_data['descriptor'] = np.concatenate(all_map_data['descriptor'])
-    all_map_data['poses'] = np.concatenate(all_map_data['poses'])
+    all_map_data['poses'] = np.array(all_map_data['poses'])
+    print(all_map_data['poses'].shape)
     all_map_data['xyz_ref'] = dump_data['xyz_ref']
+    all_map_data['calib'] = calib
     pickle.dump(all_map_data,open(args.map_file,'wb'))
 
     

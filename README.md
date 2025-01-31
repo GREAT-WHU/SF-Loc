@@ -17,7 +17,8 @@
 
 ## Update log
 - [x] Mapping Pipeline (deadline: 2024/12)
-- [ ] Localization Pipeline (deadline: 2025/01)
+- [x] Localization Pipeline (deadline: 2025/01)
+- [ ] Some gifs
 
 ## Installation
 The pipeline of the work is based on python, and the computation part is mainly based on Pytorch (with CUDA) and GTSAM.
@@ -112,7 +113,27 @@ python scripts/evaluate_map_poses.py
 
 ### 2. Localization Phase
 
-**TBD** (DDL: 2025/01)
+In the localization phase, [LightGlue](https://github.com/cvg/LightGlue) is needed for fine association. Please install it under the current environment first.
+
+2.1 Download the WHU0412 (uploading...) data sequence.
+
+2.1
+Run the following command to perform the localization.
+```Bash
+export DATASET_USER=XXX/WHU0412
+python sf-loc/localization_sf_map.py --imagedir $DATASET_USER/image_undist/cam0 --map_file sf_map.pkl  --calib calib/0412.txt --map_extrinsic calib/1023.yaml --user_extrinsic calib/0412.yaml --user_odo_file $DATASET_USER/odo.txt --enable_user_gt --user_gt_file $DATASET_USER/gt.txt --enable_map_gt --map_gt_file $DATASET_MAP/gt.txt
+```
+The following file would be generated.
+* **result_coarse.txt** &emsp; Coarse user localization results (position and map indice) based on VPR.
+* **result_fine.txt** &emsp; Fine user localization results (local and global poses).
+
+To evaluate the coarse/fine map-based localization performance, run the following commands
+```Bash
+python scripts/evaluate_coarse_poses.py
+python scripts/evaluate_fine_poses.py
+```
+
+
 
 
 ## Acknowledgement

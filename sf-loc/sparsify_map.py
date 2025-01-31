@@ -54,9 +54,10 @@ if __name__ == '__main__':
     parser.add_argument("--map_indices",  type=str,default='results/map_indice_1023n.pkl')
     parser.add_argument("--map_indices_txt",  type=str,default='results/map_stamps.txt')
     parser.add_argument("--calib", type=str, help="",default='calib/1023n.txt')
+    parser.add_argument("--threshold", type=float, default=0.4)
     args = parser.parse_args()
 
-    MAX_RATIO_THRESHOLD = 0.4
+    MAX_RATIO_THRESHOLD = args.threshold
     MAX_DISTANCE_DISP = -0.01
     MAX_NEAREST_DISTANCE = 20.0
     ENABLE_PLOT = True
@@ -110,13 +111,14 @@ if __name__ == '__main__':
 
     Gs = SE3(torch.tensor(poses).clone().detach())
     if ENABLE_PLOT:
-        plt.figure('111',figsize=[15,15])
+        plt.figure('111',figsize=[8,8])
         plt.ion()
         plt.grid()
         pts_tri = np.array([[0.0,0,0,1.0],
                             [-1.0,0,1.0,1.0],
                             [ 1.0,0,1.0,1.0],
                             [0.0,0,0,1.0]])
+        plt.tight_layout()
 
     map_indice = []
     map_time = []
@@ -157,9 +159,10 @@ if __name__ == '__main__':
         coords1, valid_mask = pops.projective_transform(Gs_this[None], disps_this[None], 
                                                torch.tensor(np.tile(intrinsics/8,(1,Gs_this.shape[0],1)),device='cuda'), ii, jj)
         coords0 = pops.coords_grid(ht//8, wd//8, device='cuda')
-        padding = 1
-        coords1 = coords1[:,:,padding:-padding,padding:-padding,:]
-        valid_mask = valid_mask[:,:,padding:-padding,padding:-padding,:]
+        padding = 0
+        if padding > 0:
+            coords1 = coords1[:,:,padding:-padding,padding:-padding,:]
+            valid_mask = valid_mask[:,:,padding:-padding,padding:-padding,:]
         max_ratio_dist = -1.0
 
         for idx in range(ii.shape[0]//2):
