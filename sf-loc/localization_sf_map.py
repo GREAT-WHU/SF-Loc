@@ -39,7 +39,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--imagedir", type=str, help="path to image directory",default='/mnt/e/WHU1023/WHU0412/image_undist/cam0')
     parser.add_argument("--calib", type=str, help="",default='calib/0412.txt')
-    parser.add_argument("--map_file", type=str, help="",default='sf_map_NE50_384_384_0_4.pkl')
+    parser.add_argument("--map_file", type=str, help="",default='sf_map.pkl')
     parser.add_argument("--enable_fine_localization", type=bool, help="", default=True)
     parser.add_argument("--enable_user_gt", type=bool, help="", default=True)
     parser.add_argument("--enable_map_gt", type=bool, help="", default=True)
@@ -85,19 +85,19 @@ if __name__ == '__main__':
     kdtree = KDTree(all_T[:,0:3,3])
     
     #! dataset (map)
-    fs = cv2.FileStorage(args.map_extrinsic, cv2.FILE_STORAGE_READ)
-    image_dataset1 = data_utils.ImageDataset(None,None,all_dd['calib'][:4],all_dd['calib'][4:],Tic = fs.getNode('i_T_c').mat())
+    fs_map = cv2.FileStorage(args.map_extrinsic, cv2.FILE_STORAGE_READ)
+    dataset_map = data_utils.ImageDataset(None,None,all_dd['calib'][:4],all_dd['calib'][4:],Tic = fs_map.getNode('i_T_c').mat())
     for i in range(len(all_tt)):
-        image_dataset1.all_data_global[all_tt[i]] = {'T':all_T[i]}
-    image_dataset1.all_data_global_keys = np.array(sorted(image_dataset1.all_data_global.keys()))
-    image_dataset1.ref_xyz = all_dd['xyz_ref']
+        dataset_map.all_data_global[all_tt[i]] = {'T':all_T[i]}
+    dataset_map.all_data_global_keys = np.array(sorted(dataset_map.all_data_global.keys()))
+    dataset_map.ref_xyz = all_dd['xyz_ref']
 
 
     #! dataset (query)
-    fs = cv2.FileStorage(args.user_extrinsic, cv2.FILE_STORAGE_READ)
+    fs_user = cv2.FileStorage(args.user_extrinsic, cv2.FILE_STORAGE_READ)
     calib = np.loadtxt(args.calib)
-    image_dataset0 = data_utils.ImageDataset(args.imagedir,None,calib[:4],calib[4:],Tic = fs.getNode('i_T_c').mat())
-    image_dataset0.load_odo(USER_ODO_FILE,np.eye(4,4))
+    dataset_user = data_utils.ImageDataset(args.imagedir,None,calib[:4],calib[4:],Tic = fs_user.getNode('i_T_c').mat())
+    dataset_user.load_odo(USER_ODO_FILE,np.eye(4,4))
 
 
     # During localization, the poses in the SF map are used.
@@ -105,11 +105,11 @@ if __name__ == '__main__':
     # ``the ground-truth map pose + user-to-map relative pose'', thus to
     # evaluate the localization results in a relative way.
     if ENABLE_MAP_GT:
-        image_dataset1.load_gt(MAP_GT_FILE,fs.getNode('ref_T_i').mat(),image_dataset1.ref_xyz)
+        dataset_map.load_gt(MAP_GT_FILE,fs_map.getNode('ref_T_i').mat(),dataset_map.ref_xyz)
 
     # This is used for pose error evaluation during processing.
     if ENABLE_USER_GT:
-        image_dataset0.load_gt(USER_GT_FILE,fs.getNode('ref_T_i').mat(),image_dataset1.ref_xyz)
+        dataset_user.load_gt(USER_GT_FILE,fs_user.getNode('ref_T_i').mat(),dataset_map.ref_xyz)
 
     print('Loaded dataset. ',time.time())
 
@@ -167,7 +167,7 @@ if __name__ == '__main__':
                 if int(round(tt_query*10))%10 != 0: continue
             
             #! VPR descriptor & similarity computation
-            mm = image_dataset0.get_image(tt_query)
+            mm = dataset_user.get_image(tt_query)
             mmrgb = cv2.cvtColor(mm, cv2.COLOR_BGR2RGB)
             pil_img = Image.fromarray(mmrgb)
             normalized_img = custom_transform(pil_img)[None]
@@ -175,7 +175,7 @@ if __name__ == '__main__':
             distance_this = np.linalg.norm(all_dd['descriptor']-query_desc,axis=1)
 
             t_series=[]; x_series=[]; y_series=[]; c_series=[]
-            Twk = image_dataset0.get_pose_odo(float(query_filelist[ii].split('.')[0])/1e9)
+            Twk = dataset_user.get_pose_odo(float(query_filelist[ii].split('.')[0])/1e9)
 
             if len(history_Twk) > 0:
                 Tkk_1 = np.linalg.inv(Twk) @ history_Twk[-1]
@@ -268,7 +268,7 @@ if __name__ == '__main__':
             if ENABLE_FINE_LOCALIZATION:
                 #! Feature matching
                 # C, H, W
-                image0 = numpy_image_to_torch(image_dataset0.get_image(tt_query)[:,:,::-1])
+                image0 = numpy_image_to_torch(dataset_user.get_image(tt_query)[:,:,::-1])
                 image1 = numpy_image_to_torch(cv2.imdecode(all_dd['image'][best_index], cv2.IMREAD_COLOR)[:,:,::-1])
                 feats0 = extractor.extract(image0.to(device))
                 feats1 = extractor.extract(image1.to(device))
@@ -292,7 +292,7 @@ if __name__ == '__main__':
 
                 #! Notice that we use the camera model of the user
                 pts1_raw = np.copy(pts1)
-                pts1 = ((image_dataset0.K @ np.linalg.inv(image_dataset1.K) @ np.hstack([pts1,np.ones([pts1.shape[0],1])]).T).T)[:,:2]
+                pts1 = ((dataset_user.K @ np.linalg.inv(dataset_map.K) @ np.hstack([pts1,np.ones([pts1.shape[0],1])]).T).T)[:,:2]
                 pts1_int = pts1_raw.astype(np.int32)
                 # pts1_int = pts1.astype(np.int32)
                 disp_values = disp[pts1_int[:, 1]+4, pts1_int[:, 0]+4]
@@ -304,14 +304,14 @@ if __name__ == '__main__':
                 history_image1.append(image1)
                 
                 if FINE_LOCALIZATION_MODE == 'PNP':
-                    x = (pts1[:,0]-image_dataset0.intrinsics[2])/image_dataset0.intrinsics[0]
-                    y = (pts1[:,1]-image_dataset0.intrinsics[3])/image_dataset0.intrinsics[1]
+                    x = (pts1[:,0]-dataset_user.intrinsics[2])/dataset_user.intrinsics[0]
+                    y = (pts1[:,1]-dataset_user.intrinsics[3])/dataset_user.intrinsics[1]
                     XX = x / disp_values
                     YY = y / disp_values
                     ZZ = 1.0 / disp_values
                     XYZ = np.vstack([XX,YY,ZZ]).T
                     try:
-                        _, rr, tt, inliers= cv2.solvePnPRansac(XYZ,pts0.astype(np.float32),image_dataset0.K,np.zeros(4))
+                        _, rr, tt, inliers= cv2.solvePnPRansac(XYZ,pts0.astype(np.float32),dataset_user.K,np.zeros(4))
                     except:
                         rr = np.zeros(3)
                         tt = np.zeros(3)
@@ -322,12 +322,12 @@ if __name__ == '__main__':
                 elif FINE_LOCALIZATION_MODE == 'FGO':
                     t0 = time.time()
                     initial = gtsam.Values()
-                    gcam = gtsam.Cal3_S2(image_dataset0.intrinsics[0],image_dataset0.intrinsics[1],0,
-                                         image_dataset0.intrinsics[2],image_dataset0.intrinsics[3])
+                    gcam = gtsam.Cal3_S2(dataset_user.intrinsics[0],dataset_user.intrinsics[1],0,
+                                         dataset_user.intrinsics[2],dataset_user.intrinsics[3])
                     graph = gtsam.NonlinearFactorGraph()
                     iwin = len(history_pts0) - 1
                     for iwin in range(max(len(history_pts0) - FINE_LOCALIZATION_WINDOWSIZE,0),len(history_pts0)):
-                        Twc1 = image_dataset1.get_camera_pose_global(history_time_db[iwin])
+                        Twc1 = dataset_map.get_camera_pose_global(history_time_db[iwin])
                         initial.insert(X(iwin*100000 + 0), gtsam.Pose3(Twc1))
                         fixpose_noise = gtsam.noiseModel.Isotropic.Sigma(6, 0.000001)
                         f_p = gtsam.PriorFactorPose3(X(iwin*100000 + 0), gtsam.Pose3(Twc1), fixpose_noise)
@@ -346,8 +346,8 @@ if __name__ == '__main__':
                             graph.push_back(f)
                     for iwin in range(max(len(history_pts0) - FINE_LOCALIZATION_WINDOWSIZE,0),len(history_pts0)):
                         if iwin < len(history_pts0)-1:
-                            Twck_1 = image_dataset0.get_camera_pose_odo(history_time_query[iwin])
-                            Twck = image_dataset0.get_camera_pose_odo(history_time_query[iwin+1])
+                            Twck_1 = dataset_user.get_camera_pose_odo(history_time_query[iwin])
+                            Twck = dataset_user.get_camera_pose_odo(history_time_query[iwin+1])
                             dT11 = np.linalg.inv(Twck_1) @  Twck
                             fixpose_noise = gtsam.noiseModel.Diagonal.Sigmas(np.array([0.00001,0.00001,0.00001,0.001,0.05,0.05]))
                             f_odo = gtsam.BetweenFactorPose3(X(iwin*100000 + 1), X((iwin+1)*100000 + 1), gtsam.Pose3(dT11), fixpose_noise)
@@ -369,43 +369,43 @@ if __name__ == '__main__':
 
                 #! Output results
                 if ENABLE_MAP_GT:
-                    Twc0_est = image_dataset1.get_camera_pose_gt(tt_map) @ T_cv
-                    Twc1 = image_dataset1.get_camera_pose_gt(tt_map)
+                    Twc0_est = dataset_map.get_camera_pose_gt(tt_map) @ T_cv
+                    Twc1 = dataset_map.get_camera_pose_gt(tt_map)
                 else:
-                    Twc0_est = image_dataset1.get_camera_pose_global(tt_map) @ T_cv
-                    Twc1 = image_dataset1.get_camera_pose_global(tt_map)
+                    Twc0_est = dataset_map.get_camera_pose_global(tt_map) @ T_cv
+                    Twc1 = dataset_map.get_camera_pose_global(tt_map)
 
                  #! Evaluate localization error
                 if ENABLE_USER_GT:
-                    Twc0 = image_dataset0.get_camera_pose_gt(tt_query)
+                    Twc0 = dataset_user.get_camera_pose_gt(tt_query)
                     Tc1c0 = np.linalg.inv(Twc1) @ Twc0
-                    Ti1i0 = image_dataset1.Tic @ Tc1c0 @ np.linalg.inv(image_dataset0.Tic)
-                    Ti1i0_cv = image_dataset1.Tic @ T_cv @ np.linalg.inv(image_dataset0.Tic)
+                    Ti1i0 = dataset_map.Tic @ Tc1c0 @ np.linalg.inv(dataset_user.Tic)
+                    Ti1i0_cv = dataset_map.Tic @ T_cv @ np.linalg.inv(dataset_user.Tic)
                     print("ground-truth: ", Ti1i0[0:3,3])
                     print("estimated: ", Ti1i0_cv[0:3,3])
                     Terr = np.linalg.inv(Ti1i0) @ Ti1i0_cv
-                    Terr = image_dataset0.Tic @ np.linalg.inv(Twc0) @ Twc0_est @ np.linalg.inv(image_dataset0.Tic)
+                    Terr = dataset_user.Tic @ np.linalg.inv(Twc0) @ Twc0_est @ np.linalg.inv(dataset_user.Tic)
                     err_att = np.array(trans.m2att(Terr[0:3,0:3])) * 57.3
                     # fp.writelines('%.3f %.3f %.3f %.3f %.3f %.3f %.3f\n'%(tt_query,Terr[0,3],Terr[1,3],Terr[2,3],err_att[0],err_att[1],err_att[2]))
 
-                T_est = Twc0_est @ np.linalg.inv(image_dataset0.Tic)
+                T_est = Twc0_est @ np.linalg.inv(dataset_user.Tic)
                 xyz = T_est[0:3,3]
                 att = np.array(trans.m2att(T_est[0:3,0:3])) * 57.3
-                xyz_ecef = image_dataset1.ref_xyz + np.array(trans.enu2cart(image_dataset1.ref_xyz,xyz))
+                xyz_ecef = dataset_map.ref_xyz + np.array(trans.enu2cart(dataset_map.ref_xyz,xyz))
                 fp_fine.writelines('%.3f %.3f %.3f %.3f %.3f %.3f %.3f %.3f %.3f %.3f\n'%(tt_query,xyz[0],xyz[1],xyz[2],
                                                                                               att[0],att[1],att[2],
                                                                                               xyz_ecef[0],xyz_ecef[1],xyz_ecef[2]))
                 fp_fine.flush()
 
             if ENABLE_USER_GT:
-                x_query = image_dataset0.get_pose_gt(tt_query)[0,3]
-                y_query = image_dataset0.get_pose_gt(tt_query)[1,3]
+                x_query = dataset_user.get_pose_gt(tt_query)[0,3]
+                y_query = dataset_user.get_pose_gt(tt_query)[1,3]
                 query_distance =np.linalg.norm(np.array([x_query,y_query]) - np.array([x_series[best_index],y_series[best_index]]))
                 print("%f Query distance: %.5f" %(tt_query, query_distance))
 
             
             xyz = all_T[best_index][0:3,3]
-            xyz_ecef = image_dataset1.ref_xyz + np.array(trans.enu2cart(image_dataset1.ref_xyz,xyz))
+            xyz_ecef = dataset_map.ref_xyz + np.array(trans.enu2cart(dataset_map.ref_xyz,xyz))
             fp_coarse.writelines('%.5f %.10f %.10f %.10f %d %.5f\n'%(tt_query,xyz_ecef[0],xyz_ecef[1],xyz_ecef[2],best_index,t_series[best_index]))
             fp_coarse.flush()
 
@@ -441,9 +441,9 @@ if __name__ == '__main__':
                         T1 = cur_result.atPose3(X(iwin*100000 + 0)).matrix()
                         T0 = cur_result.atPose3(X(iwin*100000 + 1)).matrix()
                         if ref_T1_inv is None:
-                            ref_T1_inv = np.linalg.inv(T1 @ np.linalg.inv(image_dataset1.Tic))
-                        Twc1 = image_dataset1.get_camera_pose(history_time_db[iwin])
-                        Twc0 = image_dataset0.get_camera_pose(history_time_query[iwin])
+                            ref_T1_inv = np.linalg.inv(T1 @ np.linalg.inv(dataset_map.Tic))
+                        Twc1 = dataset_map.get_camera_pose(history_time_db[iwin])
+                        Twc0 = dataset_user.get_camera_pose(history_time_query[iwin])
                         Tc1c0 = np.linalg.inv(Twc1) @ Twc0
                         T0_gt = T1 @ Tc1c0
                         for iii in range(history_pts1[iwin].shape[0]):
@@ -484,7 +484,7 @@ if __name__ == '__main__':
                         image0 = history_image0[iwin]
                         image1 = history_image1[iwin]
                         if image0 is None:
-                            image0 = numpy_image_to_torch(image_dataset0.get_image(history_time_query[iwin])[:,:,::-1])
+                            image0 = numpy_image_to_torch(dataset_user.get_image(history_time_query[iwin])[:,:,::-1])
                             image1 = numpy_image_to_torch(cv2.imdecode(all_dd['image'][history_best_index[iwin]], cv2.IMREAD_COLOR)[:,:,::-1])
                         idx = bisect.bisect(stamp_list,history_time_db[iwin]-0.01)
                         disp = cv2.resize(dump_data['disps'][idx],[W1,H1]) # Attention!!!!!
