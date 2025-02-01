@@ -64,7 +64,7 @@ We use the weights of [DROID-SLAM](https://github.com/princeton-vl/DROID-SLAM?ta
 
 In the mapping phase, multi-sensor data are used for dense bundle adjustment (DBA) to recover image depths and poses. Based on the global optimization results, the lightweight structure frame map is generated. 
 
-1.1 Download the [WHU1023](https://whueducn-my.sharepoint.com/:u:/g/personal/2015301610143_whu_edu_cn/EQX_UOB79AhHlsSI7hb2Jd4B69qd367NCMHOAcFZi7N5Mg?e=gi9NP1) data sequence.
+1.1 Download the [WHU1023](https://whueducn-my.sharepoint.com/:u:/g/personal/2015301610143_whu_edu_cn/EQX_UOB79AhHlsSI7hb2Jd4B69qd367NCMHOAcFZi7N5Mg?e=GNJVtQ) data sequence.
 
 1.2  Specify the data paths in [launch_dba.py](launch_dba.py), then run the following command 
 ```Bash
@@ -115,7 +115,7 @@ python scripts/evaluate_map_poses.py
 
 In the localization phase, [LightGlue](https://github.com/cvg/LightGlue) is needed for fine association. Please install it under the current environment first.
 
-2.1 Download the WHU0412 (uploading...) data sequence.
+2.1 Download the [WHU0412](https://whueducn-my.sharepoint.com/:u:/g/personal/2015301610143_whu_edu_cn/EfyUSrS01jxFgFJFLmKlsuoBci59yljVbOm2A2LnVXi9dA?e=YJNxhv) data sequence.
 
 2.1
 Run the following command to perform the localization.
