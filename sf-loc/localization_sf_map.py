@@ -130,7 +130,7 @@ if __name__ == '__main__':
         from lightglue import viz2d
         torch.set_grad_enabled(False);
         extractor = SuperPoint(max_num_keypoints=2048).eval().to(device)  # load the extractor
-        matcher = LightGlue(features='superpoint').eval().to(device)
+        matcher = LightGlue(features='superpoint',filter_threshold = 0.5).eval().to(device)
 
     if SHOW_VPR_HEAT:
         plt.ion()
