@@ -137,7 +137,7 @@ python scripts/evaluate_fine_poses.py
 
 
 ## Acknowledgement
-DBA-Fusion is developed by [GREAT](http://igmas.users.sgg.whu.edu.cn/group) (GNSS+ REsearch, Application and Teaching) Group, School of Geodesy and Geomatics, Wuhan University. 
+SF-Loc is developed by [GREAT](http://igmas.users.sgg.whu.edu.cn/group) (GNSS+ REsearch, Application and Teaching) Group, School of Geodesy and Geomatics, Wuhan University. 
 
 <br/>
 <div align=center>
