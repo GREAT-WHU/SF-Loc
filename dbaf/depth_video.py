@@ -284,8 +284,11 @@ class DepthVideo:
     def rm_new_gnss(self, t1):
         if (self.gnss_init_t1> 0 and self.state.gnss_valid[t1]) or self.state.odo_valid[t1]:
             graph_temp = gtsam.NonlinearFactorGraph()
-            linear_point  = self.marg_factor.linearizationPoint()
-            graph_temp.push_back(self.marg_factor)
+            if not (self.marg_factor is None):
+                linear_point  = self.marg_factor.linearizationPoint()
+                graph_temp.push_back(self.marg_factor)
+            else:
+                linear_point = gtsam.Values()
 
             dd_dump = {}
             dd_dump['factors'] = []

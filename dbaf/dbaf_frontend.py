@@ -609,6 +609,8 @@ class DBAFusionFrontend:
                 plt.plot(self.plt_pos_ref[0],self.plt_pos_ref[1],marker='^')
                 plt.pause(0.1)
 
+
+            self.graph.video.marg_factor = None
             for itr in range(1):
                 self.graph.update(None, None, use_inactive=True)
             print('GNSS initialized!!!!')
