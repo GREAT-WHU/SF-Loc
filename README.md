@@ -19,6 +19,7 @@
 - [x] Mapping Pipeline (deadline: 2024/12)
 - [x] Localization Pipeline (deadline: 2025/01)
 - [ ] Some gifs
+- [ ] Multi-Session Mapping and Re-Organized Dataset
 
 ## Installation
 The pipeline of the work is based on python, and the computation part is mainly based on Pytorch (with CUDA) and GTSAM.
