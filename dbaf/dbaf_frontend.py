@@ -565,7 +565,6 @@ class DBAFusionFrontend:
             wTbs = np.matmul(wTcs,self.video.Tbc.inverse().matrix())
             wTbs[:,0:3,3] = np.matmul(Rn0w,(wTbs[:,0:3,3]*s).T).T + tn0w[0]
             wTbs[:,0:3,0:3] = np.matmul(Rn0w, (wTbs[:,0:3,0:3]).T).T
-            
             self.refTw = np.eye(4,4)
             
             for i in range(0,self.t1):
@@ -611,6 +610,8 @@ class DBAFusionFrontend:
 
 
             self.graph.video.marg_factor = None
+            self.graph.video.pkl_fp.seek(0)
+            self.graph.video.pkl_fp.truncate()
             for itr in range(1):
                 self.graph.update(None, None, use_inactive=True)
             print('GNSS initialized!!!!')

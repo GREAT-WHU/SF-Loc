@@ -189,7 +189,7 @@ if __name__ == '__main__':
     
     for (t, image, intrinsics) in tqdm(image_stream(args.imagedir, args.imagestamp, args.enable_h5,\
                                                      args.h5path, args.calib, args.stride)):
-        # show_image(image[0])
+        show_image(image[0])
         # if not args.enable_h5:
             # continue
         if dbaf is None:
@@ -210,7 +210,7 @@ if __name__ == '__main__':
             dbaf.video.tbg = np.array([-0.0125, -0.30, 0.2091])
             dbaf.video.Tbc = gtsam.Pose3(dbaf.video.Ti1c)
             dbaf.video.state.set_imu_params([ 0.0003924 * 25,0.000205689024915 * 25, 0.004905 * 10, 0.000001454441043 * 25])
-            dbaf.video.init_pose_sigma = np.array([0.1, 0.1, 0.0001,1.0,1.0,1.0])
+            dbaf.video.init_pose_sigma = np.array([0.1, 0.1, 1 ,1.0,1.0,1.0])
             dbaf.video.init_bias_sigma = np.array([1.0,1.0,1.0, 0.1, 0.1, 0.1])
             dbaf.frontend.translation_threshold = args.translation_threshold
             dbaf.frontend.graph.mask_threshold  = args.mask_threshold

@@ -47,6 +47,7 @@ if __name__ == '__main__':
                                             calib[:4],calib[4:8],None)
     dump_data= pickle.load(open(args.depth_video,'rb'))
     disps = np.array(list(dump_data['disps'].values()))
+    tstamps = dump_data['stamps']
 
     model = vpr_models.get_model(args.method, args.backbone, args.descriptors_dimension)
     model = model.eval().to(device)
@@ -59,14 +60,14 @@ if __name__ == '__main__':
 
     with torch.inference_mode():
         for i in tqdm.tqdm(range(len(map_indices_time['indices']))):
-            pose_idx = bisect.bisect(poses_post[:,0],dump_data['stamps'][map_indices_time['indices'][i]]-0.01)
-            if poses_post[pose_idx,0] != dump_data['stamps'][map_indices_time['indices'][i]]:
+            pose_idx = bisect.bisect(poses_post[:,0],tstamps[map_indices_time['indices'][i]]-0.01)
+            if poses_post[pose_idx,0] != tstamps[map_indices_time['indices'][i]]:
                 continue
-            all_map_data['tstamps'].append(dump_data['stamps'][map_indices_time['indices'][i]])
+            all_map_data['tstamps'].append(tstamps[map_indices_time['indices'][i]])
             all_map_data['poses'].append(poses_post[pose_idx,1:8])
 
             ''' Pack RGB images and disparities. '''
-            mm = image_data.get_image(dump_data['stamps'][map_indices_time['indices'][i]])
+            mm = image_data.get_image(tstamps[map_indices_time['indices'][i]])
             encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), 60]
             _, buffer = cv2.imencode('.jpg', mm, encode_param)
             image_bytes = buffer.tobytes()

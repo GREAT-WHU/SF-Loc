@@ -7,6 +7,7 @@ import time
 import geoFunc.trans as trans
 from scipy.spatial.transform import Rotation
 import re
+import matplotlib.pyplot as plt
 
 
 def id2pos(id):
@@ -35,6 +36,11 @@ def id2num(id):
     if id>=X(0) and id<X(1000000): return id - X(0)
 
 def optimize_all(graph_path:str, result_file:str):
+
+    count_vis = 0
+    count_ins = 0
+    count_gnss = 0
+
     graph = gtsam.NonlinearFactorGraph()
     values = gtsam.Values()
     null_count = 0
@@ -66,16 +72,16 @@ def optimize_all(graph_path:str, result_file:str):
                 pass
             if dd['factors'][i]['type']=='prior':
                 keys = dd['factors'][i]['factor'].keys()
-                kk = dd['factors'][i]['factor'].keys()
-                pp = id2pos(kk[0])
                 graph.push_back(dd['factors'][i]['factor'].rekey((np.array(keys)+rollup).tolist()))
             if dd['factors'][i]['type']=='imu':
+                count_ins += 1
                 keys = dd['factors'][i]['factor'].keys()
                 id = dd['factors'][i]['factor'].keys()[0] -X(0) + rollup
                 ff = dd['factors'][i]['factor']
                 ff_new = ff.rekey_explicit(keys,(np.array(keys)+rollup).tolist())
                 graph.push_back(ff_new)
             if dd['factors'][i]['type']=='vis':
+                count_vis += 1
                 keys = dd['factors'][i]['factor'].keys()
                 kk = np.array(dd['factors'][i]['factor'].keys())-X(0) +rollup
                 graph.push_back(dd['factors'][i]['factor'].rekey((np.array(keys)+rollup).tolist()))
@@ -106,7 +112,7 @@ def optimize_all(graph_path:str, result_file:str):
     for k in values.keys():
         if k not in keyVector_set:
             values.erase(k)
-
+    print(count_gnss,count_ins,count_vis)
     print('Optimizing...', time.time())
     params = gtsam.LevenbergMarquardtParams();params.setMaxIterations(100)
     params.setVerbosityLM("SUMMARY")
@@ -114,6 +120,9 @@ def optimize_all(graph_path:str, result_file:str):
     result = optimizer.optimize()
     values = result
 
+    plt.figure()
+    x_series = []
+    y_series = []
     fp_result_file = open(result_file,'wt')
     for i in result.keys():
         if id2type(i) == 'X':
@@ -127,9 +136,13 @@ def optimize_all(graph_path:str, result_file:str):
             line += ' %.6f %.6f %.6f'% (p[0],p[1],p[2]) 
             fp_result_file.writelines(line+'\n')
             fp_result_file.flush()
+            x_series.append(ppp[0])
+            y_series.append(ppp[1])
     fp_result_file.close()
     print('Optimization finished.', time.time())
     del graph
+    plt.plot(x_series,y_series)
+    plt.show()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
