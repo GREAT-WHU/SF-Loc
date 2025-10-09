@@ -8,6 +8,7 @@ import geoFunc.data_utils as data_utils
 import math
 import matplotlib
 from scipy.spatial.transform import Rotation
+import cv2
 
 matplotlib.rcParams['mathtext.fontset'] = 'custom'
 matplotlib.rcParams['mathtext.rm'] = 'Times New Roman'
@@ -24,12 +25,14 @@ font1={'family':'Sans',
 props = dict(boxstyle='square', facecolor='white', alpha=1)
 
 all_data ={}
-Ri0i1=trans.att2m([-0.1/180*math.pi,-0.1/180*math.pi,-1.0/180*math.pi])
-ti0i0i1 = np.array([0.0,0.47,-0.04])
-Ti0i1 = np.eye(4,4); Ti0i1[0:3,0:3] = Ri0i1; Ti0i1[0:3,3] = np.array([0.0,0.47,-0.04])
+fs_map = cv2.FileStorage('calib/0412.yaml', cv2.FILE_STORAGE_READ)
+Ti0i1 = fs_map.getNode('ref_T_i').mat()
+Ri0i1 = Ti0i1[0:3,0:3]
+ti0i0i1 = Ti0i1[0:3,3]
+
 Ten0 = None
 is_ref_set  = False
-fp = open('/mnt/e/WHU1023/WHU0412/gt.txt','rt')
+fp = open('/mnt/e/WHU1023/WHU0412m/gt.txt','rt')
 while True:
     line = fp.readline().strip()
     if line == '':break
@@ -66,21 +69,26 @@ while True:
     Tn0i = np.matmul(np.linalg.inv(Ten0),Tei1)
     all_data[sod]['T'] = Tn0i
 
+
 dd = np.loadtxt('results/result_fine.txt')
 t_series = []
 x_series = []
 y_series = []
+z_series = []
+e_series = []
+n_series = []
+u_series = []
 for i in range(dd.shape[0]):
     tt = dd[i,0]
     t_series.append(tt)
     dxyz = dd[i,7:10]
-    Rni = all_data[tt]['T'][0:3,0:3]
     dxyz = [dxyz[0]-all_data[tt]['X0'],
             dxyz[1]-all_data[tt]['Y0'],
             dxyz[2]-all_data[tt]['Z0']]
     denu = trans.cart2enu([all_data[tt]['X0'],all_data[tt]['Y0'],all_data[tt]['Z0']],dxyz)
     x_series.append(denu[0])
     y_series.append(denu[1])
+    z_series.append(denu[2])
 dd = np.array([t_series,x_series,y_series]).T
 
 plt.figure('1',figsize = [4,2.5])
@@ -88,6 +96,7 @@ plt.plot(dd[:,0],dd[:,1],c='r',linewidth=0.1,marker='*',markersize=1.0,label='SF
 plt.plot(dd[:,0],dd[:,2],c='g',linewidth=0.1,marker='*',markersize=1.0)
 plt.text(0.05,0.85,'SF-Loc',transform = plt.gca().transAxes,bbox=props);plt.ylim([-5,5]);plt.ylabel('Error [m]',labelpad=0)
 plt.tight_layout(pad=0.1)
+
 
 mask = np.linalg.norm(dd[:,1:3],axis=1)<5.0
 rmse = np.sqrt(np.sum(np.power(np.linalg.norm(dd[mask,1:3],axis=1),2))/np.sum(mask))

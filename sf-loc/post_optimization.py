@@ -89,7 +89,7 @@ def optimize_all(graph_path:str, result_file:str):
                 gnss_factor = gtsam.GPSFactor(dd['factors'][i]['symbol']+rollup, dd['factors'][i]['pos'],\
                     gtsam.noiseModel.Robust.Create(\
                     gtsam.noiseModel.mEstimator.Cauchy(0.1),\
-                    gtsam.noiseModel.Diagonal.Sigmas(np.array([0.5,0.5,1.0]))))
+                    gtsam.noiseModel.Diagonal.Sigmas(np.array([0.15,0.15,0.25]))))
                 graph.push_back(gnss_factor)
             if 'ten0' in dd.keys():
                 ten0 = dd['ten0']

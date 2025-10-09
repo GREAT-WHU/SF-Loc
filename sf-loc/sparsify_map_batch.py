@@ -55,6 +55,7 @@ if __name__ == '__main__':
     parser.add_argument("--map_indices_txt",  type=str,default='results/map_stamps.txt')
     parser.add_argument("--calib", type=str, help="",default='calib/1023n.txt')
     parser.add_argument("--threshold", type=float, default=0.4)
+    parser.add_argument("--freshness", action="store_true", default=False)
     args = parser.parse_args()
 
     assert(len(args.imagedir) == len(args.imagestamp))
@@ -66,7 +67,7 @@ if __name__ == '__main__':
     MAX_RATIO_THRESHOLD = args.threshold - 0.002
     MAX_DISTANCE_DISP = -0.01
     MAX_NEAREST_DISTANCE = 20.0
-    ENABLE_PLOT = False
+    ENABLE_PLOT = True
     calib = args.calib
     calib = np.loadtxt(calib, delimiter=" ")
     fx, fy, cx, cy = calib[:4]
@@ -235,57 +236,60 @@ if __name__ == '__main__':
                     plt.ylim([TTT[-1,1,3]-100,TTT[-1,1,3]+100])
                     plt.pause(0.01)
             else:
-                # freshness first
+                if args.freshness:
+                    # freshness first
 
-                idx_sort = np.argsort(max_ratio_dist_list)
-                del_num = 0
+                    idx_sort = np.argsort(max_ratio_dist_list)
+                    del_num = 0
 
-                discard = False
-                for ii in idx_sort:
-                    ratio = max_ratio_dist_list[ii]
-                    if max_ratio_dist_list[ii] > MAX_RATIO_THRESHOLD:
-                        max_idx = max_idx_list[ii]
-                        if  indice_this[max_idx] < ACCUMULATED:
-                            123
-                        else:
-                            discard = True
-                if discard: continue
-
-                for ii in idx_sort:
-                    ratio = max_ratio_dist_list[ii]
-                    if max_ratio_dist_list[ii] > MAX_RATIO_THRESHOLD:
-                        max_idx = max_idx_list[ii]
-                        if  indice_this[max_idx] < ACCUMULATED:
-                            idx_to_delete = np.where(np.array(map_indice) == indice_this[max_idx])[0][0]
-                            dT = np.linalg.inv(map_TTT[idx_to_delete]) @ TTT[-1]
-                            att  = Rotation.from_matrix(dT[0:3,0:3]).as_euler('zyx')
-                            print(att * 57.3)
-                            if np.linalg.norm(att)*57.3 > 60.0 : 
-                                pass
+                    discard = False
+                    for ii in idx_sort:
+                        ratio = max_ratio_dist_list[ii]
+                        if max_ratio_dist_list[ii] > MAX_RATIO_THRESHOLD:
+                            max_idx = max_idx_list[ii]
+                            if  indice_this[max_idx] < ACCUMULATED:
+                                123
                             else:
-                                fp_out.writelines('-%.5f\n'%map_time[idx_to_delete])
-                                if ENABLE_PLOT:
-                                    plt.plot(pts[:,0],pts[:,1],c=color_list[i_seq],linewidth=1)
-                                    plt.scatter(map_TTT[idx_to_delete][0,3],map_TTT[idx_to_delete][1,3],marker='x',color='black')
-                                    plt.pause(0.01)
-                                del map_indice[idx_to_delete]
-                                del map_time[idx_to_delete]
-                                del map_TTT[idx_to_delete]
-                                del_num += 1
-                                break
-                if del_num>0:
-                    map_indice.append(i+ACCUMULATED)
-                    map_time.append(dump_data['stamps'][i])
-                    fp_out.writelines('%.5f\n'%dump_data['stamps'][i])
-                    fp_out.flush()
-                    map_TTT.append(TTT[-1])
-                    if ENABLE_PLOT:
-                        plt.plot(pts[:,0],pts[:,1],c=color_list[i_seq],linewidth=1)
-                        plt.xlim([TTT[-1,0,3]-100,TTT[-1,0,3]+100])
-                        plt.ylim([TTT[-1,1,3]-100,TTT[-1,1,3]+100])
-                        plt.pause(0.01)
-                            # if False:
-                            #     plt.plot(pts[:,0],pts[:,1],c=color_list[i_seq],alpha= 0.2)
+                                discard = True
+                    if discard: continue
+
+                    for ii in idx_sort:
+                        ratio = max_ratio_dist_list[ii]
+                        if max_ratio_dist_list[ii] > MAX_RATIO_THRESHOLD:
+                            max_idx = max_idx_list[ii]
+                            if  indice_this[max_idx] < ACCUMULATED:
+                                idx_to_delete = np.where(np.array(map_indice) == indice_this[max_idx])[0][0]
+                                dT = np.linalg.inv(map_TTT[idx_to_delete]) @ TTT[-1]
+                                att  = Rotation.from_matrix(dT[0:3,0:3]).as_euler('zyx')
+                                print(att * 57.3)
+                                if np.linalg.norm(att)*57.3 > 60.0 : 
+                                    pass
+                                else:
+                                    fp_out.writelines('-%.5f\n'%map_time[idx_to_delete])
+                                    if ENABLE_PLOT:
+                                        plt.plot(pts[:,0],pts[:,1],c=color_list[i_seq],linewidth=1)
+                                        plt.scatter(map_TTT[idx_to_delete][0,3],map_TTT[idx_to_delete][1,3],marker='x',color='black')
+                                        plt.pause(0.01)
+                                    del map_indice[idx_to_delete]
+                                    del map_time[idx_to_delete]
+                                    del map_TTT[idx_to_delete]
+                                    del_num += 1
+                                    break
+                    if del_num>0:
+                        map_indice.append(i+ACCUMULATED)
+                        map_time.append(dump_data['stamps'][i])
+                        fp_out.writelines('%.5f\n'%dump_data['stamps'][i])
+                        fp_out.flush()
+                        map_TTT.append(TTT[-1])
+                        if ENABLE_PLOT:
+                            plt.plot(pts[:,0],pts[:,1],c=color_list[i_seq],linewidth=1)
+                            plt.xlim([TTT[-1,0,3]-100,TTT[-1,0,3]+100])
+                            plt.ylim([TTT[-1,1,3]-100,TTT[-1,1,3]+100])
+                            plt.pause(0.01)
+                                # if False:
+                                #     plt.plot(pts[:,0],pts[:,1],c=color_list[i_seq],alpha= 0.2)
+                else:
+                    pass
         ACCUMULATED = map_disps.shape[0]
 
     pickle.dump({'indices':map_indice,'time':map_time},pkl_out)

@@ -1,0 +1,16 @@
+python sf-loc/localization_sf_map.py \
+    --imagedir /mnt/e/WHU1023/WHU0412m/image/cam0 \
+    --map_file sf_map.pkl \
+    --calib calib/0412.txt \
+    --map_extrinsic calib/1023.yaml \
+    --user_extrinsic calib/0412.yaml \
+    --user_odo_file /mnt/e/WHU1023/WHU0412m/odo.txt \
+    --enable_user_gt True \
+    --user_gt_file /mnt/e/WHU1023/WHU0412m/gt.txt \
+    --map_gt_file /mnt/e/WHU1023/WHU1023/gt.txt \
+    --result_fine "results/result_fine.txt"\
+    --multiframe_vpr_mode SSS\
+    --vpr_extra_framenum 10 \
+    --fine_localization_windowsize 10\
+    --enable_fine_localization \
+    --enable_map_gt

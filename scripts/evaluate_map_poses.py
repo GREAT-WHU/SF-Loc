@@ -49,7 +49,7 @@ all_data ={}
 Ri0i1=trans.att2m([0.0/180*math.pi,0.0/180*math.pi,0.0/180*math.pi])
 Ten0 = None
 is_ref_set  = False
-fp = open('/mnt/e/WHU1023/gt.txt','rt')
+fp = open('/mnt/e/WHU1023/WHU1023m/gt.txt','rt')
 while True:
     line = fp.readline().strip()
     if line == '':break
@@ -96,7 +96,7 @@ all_data_old =copy.deepcopy(all_data)
 last_dd=[]
 first_sod=0
 last_sod=0
-fp = open(r'results/poses_realtime.txt','rt')
+fp = open(r'results/poses_A_realtime.txt','rt')
 while True:
     line = fp.readline().strip()
     if line == '':
@@ -131,8 +131,6 @@ dist = 0.0
 
 for sod in sorted(all_data.keys()):
     dd = all_data[sod]
-    if sod < 6360: continue
-    if sod > 11760: continue
     if 'X0' in dd.keys() and 'X1' in dd.keys():
         t_series.append(sod)
         xyz = np.array([dd['X0'],dd['Y0'],dd['Z0']])
@@ -184,7 +182,7 @@ horiz_err_list.append(horiz_err)
 
 ### 2) MS-DBA (post-processing)
 all_data = copy.deepcopy(all_data_old)
-fp = open(r'results/poses_post.txt','rt')
+fp = open(r'results/poses_A_post.txt','rt')
 while True:
     line = fp.readline().strip()
     if line == '':
@@ -240,7 +238,7 @@ horiz_err_list.append(horiz_err)
 
 ### 3) RTK 
 all_data = copy.deepcopy(all_data_old)
-fp = open(r'/mnt/e/WHU1023/rtk.txt','rt')
+fp = open(r'/mnt/e/WHU1023/WHU1023m/rtk.txt','rt')
 while True:
     line = fp.readline().strip()
     if line == '':

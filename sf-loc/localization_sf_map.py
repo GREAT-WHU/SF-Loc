@@ -40,14 +40,14 @@ if __name__ == '__main__':
     parser.add_argument("--imagedir", type=str, help="path to image directory",default='/mnt/e/WHU1023/WHU0412/image_undist/cam0')
     parser.add_argument("--calib", type=str, help="",default='calib/0412.txt')
     parser.add_argument("--map_file", type=str, help="",default='sf_map.pkl')
-    parser.add_argument("--enable_fine_localization", type=bool, help="", default=True)
+    parser.add_argument("--enable_fine_localization", action="store_true", help="", default=False)
     parser.add_argument("--enable_user_gt", type=bool, help="", default=True)
-    parser.add_argument("--enable_map_gt", type=bool, help="", default=True)
+    parser.add_argument("--enable_map_gt", action="store_true", help="", default=False)
     parser.add_argument("--force_integer_sec", type=bool, help="", default=True)
     parser.add_argument("--multiframe_vpr_mode", type=str, help="",default='SSS',choices=["SSS", "VOTING"])
     parser.add_argument("--vpr_extra_framenum", type=str, help="",default='10',choices=["0", "5", "10"])
     parser.add_argument("--fine_localization_mode", type=str, help="",default='FGO',choices=["FGO", "PNP"])
-    parser.add_argument("--fine_localization_windowsize", type=int, default=10, help="Only valid when using FGO.")
+    parser.add_argument("--fine_localization_windowsize", type=int, default=1, help="Only valid when using FGO.")
     parser.add_argument("--show_vpr_heat", action="store_true", help="", default=False)
     parser.add_argument("--show_snapshot", action="store_true", help="", default=False)
     parser.add_argument("--map_gt_file", type=str, help="",default='/mnt/e/WHU1023/WHU1023/gt.txt')
@@ -130,7 +130,7 @@ if __name__ == '__main__':
         from lightglue import viz2d
         torch.set_grad_enabled(False);
         extractor = SuperPoint(max_num_keypoints=2048).eval().to(device)  # load the extractor
-        matcher = LightGlue(features='superpoint',filter_threshold = 0.5).eval().to(device)
+        matcher = LightGlue(features='superpoint',filter_threshold = 0.4).eval().to(device)
 
     if SHOW_VPR_HEAT:
         plt.ion()
@@ -140,9 +140,9 @@ if __name__ == '__main__':
     fp_coarse = open(args.result_coarse,'wt')
 
     if VPR_EXTRA_FRAMENUM == '5':
-        multi_frame_win = [-1,-2,-3,-4,-5]
+        multi_frame_win = [-1,-2,-3,-4]
     elif VPR_EXTRA_FRAMENUM == '10':
-        multi_frame_win = [-2,-4,-6,-8,-10]
+        multi_frame_win = [-1,-3,-5,-7,-9]
 
     #! history states
     # These states should have the same sizes.
@@ -156,12 +156,12 @@ if __name__ == '__main__':
     history_best_index      = []
     history_disps  = []
     history_pts0 = []; history_image0 = []
-    history_pts1 = []; history_image1 = []
+    history_pts1 = []; history_image1 = []; history_pts1_raw = [];
 
     is_first = True
     query_filelist = sorted(os.listdir(args.imagedir))
     with torch.inference_mode():
-        for ii in tqdm.tqdm(range(len(query_filelist))):
+        for ii in tqdm.tqdm(range(0,len(query_filelist))):
             tt_query = float(query_filelist[ii].split('.')[0])/1e9
             if args.force_integer_sec:
                 if int(round(tt_query*10))%10 != 0: continue
@@ -178,10 +178,15 @@ if __name__ == '__main__':
             Twk = dataset_user.get_pose_odo(float(query_filelist[ii].split('.')[0])/1e9)
 
             if len(history_Twk) > 0:
-                Tkk_1 = np.linalg.inv(Twk) @ history_Twk[-1]
+                if len(history_Twk) == 1:
+                    Tkk_1 = np.linalg.inv(Twk) @ history_Twk[-1]
+                    Tkk_11 = np.linalg.inv(Twk) @ history_Twk[-1]
+                else:
+                    Tkk_1 = np.linalg.inv(Twk) @ history_Twk[-1]
+                    Tkk_11 = np.linalg.inv(history_Twk[-1]) @ history_Twk[-2]
 
                 #! Skip frames
-                if np.linalg.norm(Tkk_1[0:3,3])< 2.0:  # small motion
+                if np.linalg.norm(Tkk_1[0:3,3])< 2.0 :  # small motion
                     history_Twk.pop(); history_distance.pop(); 
                     history_time_query.pop(); history_time_db.pop()
                     history_x_series.pop(); history_y_series.pop(); history_c_series.pop()
@@ -189,14 +194,17 @@ if __name__ == '__main__':
                     if ENABLE_FINE_LOCALIZATION:
                         history_pts0.pop(); history_image0.pop()
                         history_pts1.pop(); history_image1.pop()
+                        history_pts1_raw.pop()
                         history_disps.pop()
-                
                 #! Multi-frame VPR (SSS)
                 if MULTIFRAME_VPR_MODE == 'SSS' and VPR_EXTRA_FRAMENUM != '0' and len(history_Twk) > 10:
                     particles = [Twk, Twk @ trans.att2m_4x4([0,0,30.0/57.3]),Twk @ trans.att2m_4x4([0,0,-30.0/57.3])]
+                    # particles = [Twk, Twk @ trans.att2m_4x4([0,0,30.0/57.3]),Twk @ trans.att2m_4x4([0,0,-30.0/57.3])
+                                #  , Twk @ trans.att2m_4x4([0,0,15.0/57.3]),Twk @ trans.att2m_4x4([0,0,-15.0/57.3])]
+                    # particles = [Twk]
                     distance_before_list = [[] for _ in range(len(particles))]
                     for jjj in range(len(particles)):
-                        distance_before_list[jjj].append(distance_this)
+                        # distance_before_list[jjj].append(distance_this)
                         for jj in multi_frame_win:
                             Tkk_1 = np.linalg.inv(particles[jjj]) @ history_Twk[jj]
                             all_Tk_1 = np.matmul(all_T,Tkk_1)
@@ -211,7 +219,9 @@ if __name__ == '__main__':
                             kd_idx = np.take_along_axis(kd_idx,ss,axis=1)
                             distance_KNN = history_distance[jj][kd_idx]
                             distance_before_list[jjj].append(distance_KNN[:,0])
-                        distance_before_list[jjj] = np.array(distance_before_list[jjj])
+                        # distance_before_list[jjj] = np.array(distance_before_list[jjj])
+                        distance_before_list[jjj] = np.vstack([np.sort(np.array(distance_before_list[jjj]), axis=0)[:-1],distance_this.reshape(1,-1)]) # allow for one outlier
+
                     distance_before_list = np.array(distance_before_list)
                     distance = np.min(np.linalg.norm(distance_before_list,axis=1),axis=0)
                     arg_distance = np.argmin(np.linalg.norm(distance_before_list,axis=1),axis=0)
@@ -290,6 +300,7 @@ if __name__ == '__main__':
                     pts0 = pts0[mask_up]
                     pts1 = pts1[mask_up]
 
+                history_pts1_raw.append(pts1)
                 #! Notice that we use the camera model of the user
                 pts1_raw = np.copy(pts1)
                 pts1 = ((dataset_user.K @ np.linalg.inv(dataset_map.K) @ np.hstack([pts1,np.ones([pts1.shape[0],1])]).T).T)[:,:2]
@@ -332,11 +343,33 @@ if __name__ == '__main__':
                         fixpose_noise = gtsam.noiseModel.Isotropic.Sigma(6, 0.000001)
                         f_p = gtsam.PriorFactorPose3(X(iwin*100000 + 0), gtsam.Pose3(Twc1), fixpose_noise)
                         graph.push_back(f_p)
-                        initial.insert(X(iwin*100000 + 1), gtsam.Pose3(Twc1))
+
+                        x = (history_pts1[iwin][:,0]-dataset_user.intrinsics[2])/dataset_user.intrinsics[0]
+                        y = (history_pts1[iwin][:,1]-dataset_user.intrinsics[3])/dataset_user.intrinsics[1]
+                        XX = x / history_disps[iwin]
+                        YY = y / history_disps[iwin]
+                        ZZ = 1.0 / history_disps[iwin]
+                        XYZ = np.vstack([XX,YY,ZZ]).T
+                        try:
+                            _, rr, tt, inliers= cv2.solvePnPRansac(XYZ,history_pts0[iwin].astype(np.float32),dataset_user.K,np.zeros(4))
+                        except:
+                            rr = np.zeros(3)
+                            tt = np.zeros(3)
+                        RR, _ = cv2.Rodrigues(rr)
+                        TT = np.eye(4,4);TT[0:3,0:3] = RR; TT[0:3,3] = (tt.T)[0]
+                        TT = np.linalg.inv(TT)
+                        T_cv = TT; R = TT[0:3,0:3]; t = TT[0:3,3][None].T
+
+                        initial.insert(X(iwin*100000 + 1), gtsam.Pose3(Twc1 @ TT))
+                        # else:
+                            # Twc1_temp = np.copy(Twc1)
+                            # Twc1_temp[0:3,3] =  Twc1_temp[0:3,3] + Twc1[0:3,0:3] @ np.array([0.0,0.0,-5.0])
+                            # initial.insert(X(iwin*100000 + 1), gtsam.Pose3(Twc1_temp))
+
                         for iii in range(history_pts1[iwin].shape[0]):
                             noise = gtsam.noiseModel.Robust.Create(\
-                                                      gtsam.noiseModel.mEstimator.Cauchy(1.0),\
-                                          gtsam.noiseModel.Diagonal.Sigmas(np.array([2.0,2.0])))
+                                                      gtsam.noiseModel.mEstimator.Cauchy(1.00),\
+                                          gtsam.noiseModel.Diagonal.Sigmas(np.array([1.0,1.0])))
                             f = gtsam_unstable.AnchoredFixedInvDepthFactor(history_pts1[iwin][iii].astype(np.float64),
                                                                       history_pts0[iwin][iii].astype(np.float64),
                                                                       history_disps[iwin][iii],
@@ -353,7 +386,7 @@ if __name__ == '__main__':
                             f_odo = gtsam.BetweenFactorPose3(X(iwin*100000 + 1), X((iwin+1)*100000 + 1), gtsam.Pose3(dT11), fixpose_noise)
                             graph.push_back(f_odo)
                     try:
-                        params = gtsam.LevenbergMarquardtParams()
+                        params = gtsam.LevenbergMarquardtParams();#params.setMaxIterations(10)
                         optimizer = gtsam.LevenbergMarquardtOptimizer(graph, initial, params)
                         params.setVerbosityLM("SUMMARY")
                         cur_result = optimizer.optimize()
@@ -381,6 +414,7 @@ if __name__ == '__main__':
                     Tc1c0 = np.linalg.inv(Twc1) @ Twc0
                     Ti1i0 = dataset_map.Tic @ Tc1c0 @ np.linalg.inv(dataset_user.Tic)
                     Ti1i0_cv = dataset_map.Tic @ T_cv @ np.linalg.inv(dataset_user.Tic)
+                    Ti1i0_cv[0,2] = 0.0
                     print("ground-truth: ", Ti1i0[0:3,3])
                     print("estimated: ", Ti1i0_cv[0:3,3])
                     Terr = np.linalg.inv(Ti1i0) @ Ti1i0_cv
@@ -440,10 +474,11 @@ if __name__ == '__main__':
                     for iwin in range(max(len(history_pts0) - FINE_LOCALIZATION_WINDOWSIZE,0),len(history_pts0)):
                         T1 = cur_result.atPose3(X(iwin*100000 + 0)).matrix()
                         T0 = cur_result.atPose3(X(iwin*100000 + 1)).matrix()
+                        T0[0:3,0:3] =  T0[0:3,0:3] @ dataset_user.Tic[0:3,0:3].T @ trans.att2m([0.008,-0.002,0.008])  @ dataset_user.Tic[0:3,0:3]
                         if ref_T1_inv is None:
                             ref_T1_inv = np.linalg.inv(T1 @ np.linalg.inv(dataset_map.Tic))
-                        Twc1 = dataset_map.get_camera_pose(history_time_db[iwin])
-                        Twc0 = dataset_user.get_camera_pose(history_time_query[iwin])
+                        Twc1 = dataset_map.get_camera_pose_gt(history_time_db[iwin])
+                        Twc0 = dataset_user.get_camera_pose_gt(history_time_query[iwin])
                         Tc1c0 = np.linalg.inv(Twc1) @ Twc0
                         T0_gt = T1 @ Tc1c0
                         for iii in range(history_pts1[iwin].shape[0]):
@@ -477,37 +512,44 @@ if __name__ == '__main__':
                     plt.tick_params(left = False, right = False , labelleft = False , 
                         labelbottom = False, bottom = False) 
                     plt.tight_layout()
-                    plt.savefig('temp/%d_%d_bev_match.png'%(int(round(tt_query*1e6)*1e3),FINE_LOCALIZATION_WINDOWSIZE),dpi=600)
+                    Terr = np.linalg.inv(T0_gt) @ T0
+
+                    plt.savefig('temp/%d_%d_bev_match_%.3f_%.3f.png'%(int(round(tt_query*1e6)*1e3),FINE_LOCALIZATION_WINDOWSIZE,\
+                                                                        np.sqrt(Terr[0,3]**2 + Terr[2,3]**2),np.linalg.norm(trans.m2att(Terr[0:3,0:3]))*57.3 ),dpi=300)
+
                     for iwin in range(max(len(history_pts0) - FINE_LOCALIZATION_WINDOWSIZE,0),len(history_pts0)):
                         m_kpts0 = history_pts0[iwin].astype(np.float64)
                         m_kpts1 = history_pts1[iwin].astype(np.float64)
+                        m_kpts1_raw = history_pts1_raw[iwin].astype(np.float64)
                         image0 = history_image0[iwin]
                         image1 = history_image1[iwin]
                         if image0 is None:
                             image0 = numpy_image_to_torch(dataset_user.get_image(history_time_query[iwin])[:,:,::-1])
                             image1 = numpy_image_to_torch(cv2.imdecode(all_dd['image'][history_best_index[iwin]], cv2.IMREAD_COLOR)[:,:,::-1])
-                        idx = bisect.bisect(stamp_list,history_time_db[iwin]-0.01)
-                        disp = cv2.resize(dump_data['disps'][idx],[W1,H1]) # Attention!!!!!
-                        disp = 1/(np.round((1/disp)*100)/100)
-                        disp_show = vis_disp(disp,1,False,str(iwin),True)
-                        axes = viz2d.plot_images([disp_show[:,:,::-1], image0])
-                        viz2d.plot_matches(m_kpts1, m_kpts0, color='lime', lw=0.2)
-                        fig = plt.gcf()
-                        ax = fig.axes
-                        ax0, ax1 = ax[1], ax[0]
-                        for iii in range(history_pts1[iwin].shape[0]):
-                            f = gtsam_unstable.AnchoredInvDepthFactor(history_pts1[iwin][iii].astype(np.float64),
-                                                                      history_pts0[iwin][iii].astype(np.float64),
-                                                                      noise,
-                                                                      X(iwin*100000 + 0),
-                                                                      X(iwin*100000 + 1),L(iwin*100000 + iii),gcam)
-                            err = f.evaluateError(cur_result.atPose3(X(iwin*100000 + 0)),cur_result.atPose3(X(iwin*100000 + 1)),history_disps[iwin][iii])
-                            if np.linalg.norm(err)<5:
-                                ax0.scatter(m_kpts0[iii, 0], m_kpts0[iii, 1], s=50,marker='o',c='none',edgecolors='yellow')
-                                ax1.scatter(m_kpts1[iii, 0], m_kpts1[iii, 1], s=50,marker='o',c='none',edgecolors='yellow')
-                        plt.savefig('temp/%d_%d_iwin_%d_match.png'%(int(round(tt_query*1e6)*1e3),FINE_LOCALIZATION_WINDOWSIZE,iwin),dpi=600)
+                        
+                        # mm = cv2.imdecode(all_dd['disps'][history_best_index[iwin]], -1)
+                        # W1 = image0.shape[2]
+                        # H1 = image0.shape[1]
+                        # disp = cv2.resize(1/(mm/100.0),[W1,H1]) 
+                        # disp_show = vis_disp(disp,1,False,str(iwin),True)
+                        # axes = viz2d.plot_images([disp_show[:,:,::-1], image0])
+                        # viz2d.plot_matches(m_kpts1, m_kpts0, color='lime', lw=0.2)
+                        # fig = plt.gcf()
+                        # ax = fig.axes
+                        # ax0, ax1 = ax[1], ax[0]
+                        # for iii in range(history_pts1[iwin].shape[0]):
+                        #     f = gtsam_unstable.AnchoredInvDepthFactor(history_pts1[iwin][iii].astype(np.float64),
+                        #                                               history_pts0[iwin][iii].astype(np.float64),
+                        #                                               noise,
+                        #                                               X(iwin*100000 + 0),
+                        #                                               X(iwin*100000 + 1),L(iwin*100000 + iii),gcam)
+                        #     err = f.evaluateError(cur_result.atPose3(X(iwin*100000 + 0)),cur_result.atPose3(X(iwin*100000 + 1)),history_disps[iwin][iii])
+                        #     if np.linalg.norm(err)<5:
+                        #         ax0.scatter(m_kpts0[iii, 0], m_kpts0[iii, 1], s=50,marker='o',c='none',edgecolors='yellow')
+                        #         ax1.scatter(m_kpts1[iii, 0], m_kpts1[iii, 1], s=50,marker='o',c='none',edgecolors='yellow')
+                        # plt.savefig('temp/%d_%d_iwin_%d_match.png'%(int(round(tt_query*1e6)*1e3),FINE_LOCALIZATION_WINDOWSIZE,iwin),dpi=600)
                         axes = viz2d.plot_images([image1, image0])
-                        viz2d.plot_matches(m_kpts1, m_kpts0, color='lime', lw=0.2)
+                        viz2d.plot_matches(m_kpts1_raw, m_kpts0, color='lime', lw=0.2)
                         fig = plt.gcf()
                         ax = fig.axes
                         ax0, ax1 = ax[1], ax[0]
@@ -520,8 +562,8 @@ if __name__ == '__main__':
                             err = f.evaluateError(cur_result.atPose3(X(iwin*100000 + 0)),cur_result.atPose3(X(iwin*100000 + 1)),history_disps[iwin][iii])
                             if np.linalg.norm(err)<5:
                                 ax0.scatter(m_kpts0[iii, 0], m_kpts0[iii, 1], s=50,marker='o',c='none',edgecolors='yellow')
-                                ax1.scatter(m_kpts1[iii, 0], m_kpts1[iii, 1], s=50,marker='o',c='none',edgecolors='yellow')
-                        plt.savefig('temp/%d_%d_iwin_%d_match_.png'%(int(round(tt_query*1e6)*1e3),FINE_LOCALIZATION_WINDOWSIZE,iwin),dpi=600)
+                                ax1.scatter(m_kpts1_raw[iii, 0], m_kpts1_raw[iii, 1], s=50,marker='o',c='none',edgecolors='yellow')
+                        plt.savefig('temp/%d_%d_iwin_%d_match_.png'%(int(round(tt_query*1e6)*1e3),FINE_LOCALIZATION_WINDOWSIZE,iwin),dpi=300)
                     cv2.waitKey(1)
                     plt.pause(0.001)
                     plt.close('all')
