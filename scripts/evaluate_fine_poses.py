@@ -32,7 +32,7 @@ ti0i0i1 = Ti0i1[0:3,3]
 
 Ten0 = None
 is_ref_set  = False
-fp = open('/mnt/e/WHU1023/WHU0412m/gt.txt','rt')
+fp = open('/mnt/e/dataset/WHU0412m/gt.txt','rt')
 while True:
     line = fp.readline().strip()
     if line == '':break

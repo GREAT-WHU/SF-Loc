@@ -29,7 +29,7 @@ ti0i0i1 = np.array([0.0,0.47,-0.04])
 Ti0i1 = np.eye(4,4); Ti0i1[0:3,0:3] = Ri0i1; Ti0i1[0:3,3] = np.array([0.0,0.47,-0.04])
 Ten0 = None
 is_ref_set  = False
-fp = open('/mnt/e/WHU1023/WHU0412/gt.txt','rt')
+fp = open('/mnt/e/dataset/WHU0412/gt.txt','rt')
 while True:
     line = fp.readline().strip()
     if line == '':break

@@ -49,7 +49,7 @@ all_data ={}
 Ri0i1=trans.att2m([0.0/180*math.pi,0.0/180*math.pi,0.0/180*math.pi])
 Ten0 = None
 is_ref_set  = False
-fp = open('/mnt/e/WHU1023/WHU1023m/gt.txt','rt')
+fp = open('/mnt/e/dataset/WHU1023m/gt.txt','rt')
 while True:
     line = fp.readline().strip()
     if line == '':break
@@ -238,7 +238,7 @@ horiz_err_list.append(horiz_err)
 
 ### 3) RTK 
 all_data = copy.deepcopy(all_data_old)
-fp = open(r'/mnt/e/WHU1023/WHU1023m/rtk.txt','rt')
+fp = open(r'/mnt/e/dataset/WHU1023m/rtk.txt','rt')
 while True:
     line = fp.readline().strip()
     if line == '':

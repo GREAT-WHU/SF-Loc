@@ -37,7 +37,7 @@ def find_local_minima(sequence, N, thr):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("--imagedir", type=str, help="path to image directory",default='/mnt/e/WHU1023/WHU0412/image_undist/cam0')
+    parser.add_argument("--imagedir", type=str, help="path to image directory",default='/mnt/e/dataset/WHU0412/image_undist/cam0')
     parser.add_argument("--calib", type=str, help="",default='calib/0412.txt')
     parser.add_argument("--map_file", type=str, help="",default='sf_map.pkl')
     parser.add_argument("--enable_fine_localization", action="store_true", help="", default=False)
@@ -50,9 +50,9 @@ if __name__ == '__main__':
     parser.add_argument("--fine_localization_windowsize", type=int, default=1, help="Only valid when using FGO.")
     parser.add_argument("--show_vpr_heat", action="store_true", help="", default=False)
     parser.add_argument("--show_snapshot", action="store_true", help="", default=False)
-    parser.add_argument("--map_gt_file", type=str, help="",default='/mnt/e/WHU1023/WHU1023/gt.txt')
-    parser.add_argument("--user_gt_file", type=str, help="",default='/mnt/e/WHU1023/WHU0412/gt.txt')
-    parser.add_argument("--user_odo_file", type=str, help="",default='/mnt/e/WHU1023/WHU0412/odo.txt')
+    parser.add_argument("--map_gt_file", type=str, help="",default='/mnt/e/dataset/WHU1023/gt.txt')
+    parser.add_argument("--user_gt_file", type=str, help="",default='/mnt/e/dataset/WHU0412/gt.txt')
+    parser.add_argument("--user_odo_file", type=str, help="",default='/mnt/e/dataset/WHU0412/odo.txt')
     parser.add_argument("--map_extrinsic", type=str, help="",default='calib/1023.yaml')
     parser.add_argument("--user_extrinsic", type=str, help="",default='calib/0412.yaml')
     parser.add_argument("--result_coarse", type=str, help="",default='results/result_coarse.txt')

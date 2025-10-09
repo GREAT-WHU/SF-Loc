@@ -78,7 +78,7 @@ The provided dataset contains three sequences (2022/10/23) for multi-session map
 
 In the mapping phase, multi-sensor data are used for dense bundle adjustment (DBA) to recover image depths and poses. Based on the global optimization results, the lightweight structure frame map is generated. 
 
-1.1 Download the [WHU1023m](TODO) data sequence.
+1.1 Download the [WHU1023m](https://drive.google.com/file/d/1tMzN9V6tMEO9E1ZatuNPOhxVDktvaj9Q/view?usp=drive_link) data sequence.
 
 1.2  Specify the data paths in [launch_dba.py](launch_dba.py), then run the following command 
 ```Bash
@@ -128,7 +128,7 @@ python scripts/evaluate_map_poses_ABC.py # for multi-session setup
 
 In the localization phase, [LightGlue](https://github.com/cvg/LightGlue) is needed for fine association. Please install it under the current environment first.
 
-2.1 Download the [WHU0412m](TODO) data sequence.
+2.1 Download the [WHU0412m](https://drive.google.com/file/d/1gX38NhSFBcCSEjnXSOmUsgZTfJPBvIvx/view?usp=drive_link) data sequence.
 
 2.1
 Run the following command to perform the localization.
